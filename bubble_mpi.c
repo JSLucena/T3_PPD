@@ -5,15 +5,16 @@
 #define DEBUG 1            // comentar esta linha quando for medir tempo
 //#define DEBUG2 1
 #define DEBUG_VERBOSE 1
-#define DEBUG_MESSAGE 1
+//#define DEBUG_MESSAGE 1
 
-#define ARRAY_SIZE 12     // trabalho final com o valores 10.000, 100.000, 1.000.000
-#define WORKSET 12
+#define ARRAY_SIZE 10     // trabalho final com o valores 10.000, 100.000, 1.000.000
+#define WORKSET 20
 
 #define STOP_TAG 0
 #define READY_TAG 1
 #define WORK_TAG 2
 #define DONE_TAG 3
+#define STOPPING_TAG 4
 
 void bs(int n, int * vetor)
 {
@@ -79,29 +80,22 @@ int main(int argc , char **argv)
     int dest;
     MPI_Status status;
 
-    int sent_to[WORKSET];
+    int *sent_to;
     int sorted = 0;
     int stop = 0;
     int to_sort = 0;
-    int all_sent = 0;
     int *message;
-
-
-    message = malloc(ARRAY_SIZE * sizeof(int));
-
-
-     
-
-   
+    int done_processess = 0;
 
     
-
-
-
 
     MPI_Init (&argc , & argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); // pega pega o numero do processo atual (rank)
     MPI_Comm_size(MPI_COMM_WORLD, &proc_n);  // pega informacao do numero de processos (quantidade total)
+
+    sent_to = malloc(proc_n * sizeof(int));
+    message = malloc(ARRAY_SIZE * sizeof(int));
+
     if(my_rank == 0)
     {
         int *work[WORKSET];
@@ -121,6 +115,7 @@ int main(int argc , char **argv)
             printf("[%03d] ", work[i][j]);
         
     }
+    printf("\n");
     #endif
         t1 = MPI_Wtime();
         while(sorted == 0)
@@ -128,56 +123,89 @@ int main(int argc , char **argv)
             
             MPI_Recv(message, ARRAY_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status); 
             
-            if(to_sort >= WORKSET)
-                {
-                    all_sent = 1;
-                    sorted = validate_sort(WORKSET,sent_to);
-
-                     for(i = 0;i < proc_n;i++)
-                        MPI_Send(message, ARRAY_SIZE, MPI_INT, i, STOP_TAG, MPI_COMM_WORLD);         
-                }
+           
+            
+            
             if(status.MPI_TAG == READY_TAG)
             {
-                if(all_sent == 0)
+
+                //sent_to[to_sort] = status.MPI_SOURCE;
+                sent_to[status.MPI_SOURCE] = to_sort;
+                for(int i = 0; i < ARRAY_SIZE;i++)
                 {
-                    sent_to[to_sort] = status.MPI_SOURCE;
-                    message = work[to_sort];
-                    to_sort++;
-                    
-                    MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
-                    #ifdef DEBUG_VERBOSE
-                    printf("mandei vetor %d para proc %d\n",to_sort-1, status.MPI_SOURCE);
-                    #endif
+                    message[i] = work[to_sort][i];
                 }
+               // message = work[to_sort];
+                to_sort++;
                 
+                MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
+
+                #ifdef DEBUG_VERBOSE
+                printf("mandei vetor %d para proc %d\n",to_sort-1, status.MPI_SOURCE);
+                #endif
+
             }
+            else if(status.MPI_TAG == STOPPING_TAG)
+            {
+                printf("proc %d morto\n", status.MPI_SOURCE);
+                done_processess++;
+            } 
             else if(status.MPI_TAG == DONE_TAG)
             {
-                #ifdef DEBUG_MESSAGE  
+                
+                             
+                    #ifdef DEBUG_MESSAGE  
                         for(j=0;j<ARRAY_SIZE;j++)
                             printf("MESSAGE [%03d] ", message[j]);
                         printf("\n");
                     #endif
                    
-                int found = search_source(WORKSET, sent_to, status.MPI_SOURCE);
-                #ifdef DEBUG_VERBOSE
-                printf("recebi vetor %d de proc %d\n",found, status.MPI_SOURCE);
-                #endif
-                if( found >= 0)
-                    work[found] = message;
+                    int found = sent_to[status.MPI_SOURCE];
 
+                    #ifdef DEBUG_VERBOSE
+                    printf("recebi vetor %d de proc %d\n",found, status.MPI_SOURCE);
+                    #endif
 
-                if(all_sent == 0)
+                   // work[found] = message;
+                    for(int i = 0; i < ARRAY_SIZE;i++)
+                        {
+                            work[found][i] = message[i];
+                        }
+                
+                if(to_sort < WORKSET)
                 {
-                    sent_to[to_sort] = status.MPI_SOURCE;
-                    message = work[to_sort];
+                    //sent_to[to_sort] = status.MPI_SOURCE;
+                    sent_to[status.MPI_SOURCE] = to_sort;
+                    for(int i = 0; i < ARRAY_SIZE;i++)
+                        {
+                            message[i] = work[to_sort][i];
+                        }
+
                     to_sort++;
+
                     #ifdef DEBUG_VERBOSE
                     printf("mandei vetor %d para proc %d\n",to_sort-1, status.MPI_SOURCE);
                     #endif
+                    
                     MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
-                }                
+
+                }
+                if(to_sort > WORKSET-1)
+                {
+                    printf("matarei proc %d\n", status.MPI_SOURCE);
+                    MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, STOP_TAG, MPI_COMM_WORLD);
+                    
+                }
+                
+                
+
+                
+                             
             }
+             if(done_processess >= proc_n-1)
+                {
+                    break;
+                }
             
         
         }
@@ -218,7 +246,10 @@ int main(int argc , char **argv)
                 MPI_Send(message, ARRAY_SIZE, MPI_INT, 0, DONE_TAG, MPI_COMM_WORLD);
             }
             if(status.MPI_TAG == STOP_TAG)
-                stop = 1;
+            {
+                MPI_Send(message, ARRAY_SIZE, MPI_INT, 0, STOPPING_TAG, MPI_COMM_WORLD);
+                break;
+            }
         }
     }
     
