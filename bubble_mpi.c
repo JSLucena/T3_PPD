@@ -2,13 +2,15 @@
 #include <stdlib.h>
 #include "mpi.h"
 
-#define DEBUG 1            // comentar esta linha quando for medir tempo
+//#define DEBUG 1            // comentar esta linha quando for medir tempo
 //#define DEBUG2 1
-#define DEBUG_VERBOSE 1
+//#define DEBUG3 1
+//#define DEBUG_VERBOSE 1
+//#define DEBUG_DEADLOCK 1
 //#define DEBUG_MESSAGE 1
 
-#define ARRAY_SIZE 10     // trabalho final com o valores 10.000, 100.000, 1.000.000
-#define WORKSET 20
+#define ARRAY_SIZE 10000   // trabalho final com o valores 10.000, 100.000, 1.000.000
+#define WORKSET 1000
 
 #define STOP_TAG 0
 #define READY_TAG 1
@@ -93,11 +95,13 @@ int main(int argc , char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); // pega pega o numero do processo atual (rank)
     MPI_Comm_size(MPI_COMM_WORLD, &proc_n);  // pega informacao do numero de processos (quantidade total)
 
-    sent_to = malloc(proc_n * sizeof(int));
+    
     message = malloc(ARRAY_SIZE * sizeof(int));
 
     if(my_rank == 0)
     {
+        sent_to = malloc(proc_n * sizeof(int));
+
         int *work[WORKSET];
         for(i = 0;i < WORKSET;i++)
             work[i] = (int*)malloc(ARRAY_SIZE * sizeof(int));
@@ -120,7 +124,9 @@ int main(int argc , char **argv)
         t1 = MPI_Wtime();
         while(sorted == 0)
         {
-            
+            #ifdef DEBUG_DEADLOCK
+                    printf("A");
+                #endif
             MPI_Recv(message, ARRAY_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status); 
             
            
@@ -147,13 +153,13 @@ int main(int argc , char **argv)
             }
             else if(status.MPI_TAG == STOPPING_TAG)
             {
+                #ifdef DEBUG_VERBOSE
                 printf("proc %d morto\n", status.MPI_SOURCE);
+                #endif
                 done_processess++;
             } 
             else if(status.MPI_TAG == DONE_TAG)
-            {
-                
-                             
+            {            
                     #ifdef DEBUG_MESSAGE  
                         for(j=0;j<ARRAY_SIZE;j++)
                             printf("MESSAGE [%03d] ", message[j]);
@@ -182,28 +188,26 @@ int main(int argc , char **argv)
                         }
 
                     to_sort++;
-
                     #ifdef DEBUG_VERBOSE
                     printf("mandei vetor %d para proc %d\n",to_sort-1, status.MPI_SOURCE);
-                    #endif
-                    
+                    #endif                                     
                     MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
-
                 }
                 if(to_sort > WORKSET-1)
                 {
+                    #ifdef DEBUG_VERBOSE
                     printf("matarei proc %d\n", status.MPI_SOURCE);
-                    MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, STOP_TAG, MPI_COMM_WORLD);
-                    
-                }
-                
-                
-
-                
-                             
+                    #endif
+                    MPI_Send(message, 1, MPI_INT, status.MPI_SOURCE, STOP_TAG, MPI_COMM_WORLD);
+             
+                }                              
             }
+            
              if(done_processess >= proc_n-1)
                 {
+                    #ifdef DEBUG_DEADLOCK
+                    printf("FODEU");
+                    #endif
                     break;
                 }
             
@@ -227,8 +231,8 @@ int main(int argc , char **argv)
     }
     else
     {
-        MPI_Send(message, ARRAY_SIZE, MPI_INT, 0, READY_TAG, MPI_COMM_WORLD);
-        while(stop == 0)
+        MPI_Send(message, 1, MPI_INT, 0, READY_TAG, MPI_COMM_WORLD);
+        while(1)
         {
             MPI_Recv(message, ARRAY_SIZE, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);  
             if(status.MPI_TAG == WORK_TAG)
@@ -244,10 +248,11 @@ int main(int argc , char **argv)
                         printf("[%03d] ", message[j]);
                 #endif
                 MPI_Send(message, ARRAY_SIZE, MPI_INT, 0, DONE_TAG, MPI_COMM_WORLD);
+                 
             }
             if(status.MPI_TAG == STOP_TAG)
             {
-                MPI_Send(message, ARRAY_SIZE, MPI_INT, 0, STOPPING_TAG, MPI_COMM_WORLD);
+                MPI_Send(message, 1, MPI_INT, 0, STOPPING_TAG, MPI_COMM_WORLD);
                 break;
             }
         }
