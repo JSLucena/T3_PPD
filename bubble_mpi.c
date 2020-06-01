@@ -9,7 +9,7 @@
 //#define DEBUG_DEADLOCK 1
 //#define DEBUG_MESSAGE 1
 
-#define ARRAY_SIZE 1000   // trabalho final com o valores 10.000, 100.000, 1.000.000
+#define ARRAY_SIZE 10000   // trabalho final com o valores 10.000, 100.000, 1.000.000
 #define WORKSET 1000
 
 #define STOP_TAG 0
