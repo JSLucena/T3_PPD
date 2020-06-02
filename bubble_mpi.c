@@ -107,6 +107,7 @@ int main(int argc , char **argv)
         for(i = 0;i < WORKSET;i++)
             work[i] = (int*)malloc(ARRAY_SIZE * sizeof(int));
             */
+            
 
 
         for (i=0 ; i<WORKSET; i++)              /* init array with worst case for sorting */

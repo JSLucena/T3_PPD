@@ -9,6 +9,13 @@
 //#define DEBUG_DEADLOCK 1
 //#define DEBUG_MESSAGE 1
 
+
+//ACESSO AO LAD - ssh portoalegre\\17103269@sparta.pucrs.br
+//ssh -o PasswordAuthentication=yes ppd59007@grad.lad.pucrs.br
+
+
+
+
 #define ARRAY_SIZE 200000  // trabalho final com o valores 10.000, 100.000, 1.000.000
 #define WORKSET 1000
 
@@ -121,11 +128,11 @@ int main(int argc , char **argv)
             
             if(status.MPI_TAG == READY_TAG)
             {
-
+                int i;
                 //sent_to[to_sort] = status.MPI_SOURCE;
                 sent_to[status.MPI_SOURCE] = to_sort;
                 
-                for(int i = 0; i < ARRAY_SIZE;i++)
+                for(i = 0; i < ARRAY_SIZE;i++)
                 {
                     message[i] = work[to_sort][i];
                 }
@@ -162,7 +169,7 @@ int main(int argc , char **argv)
                     #endif
 
                    
-                    for(int i = 0; i < ARRAY_SIZE;i++)
+                    for(i = 0; i < ARRAY_SIZE;i++)
                         {
                             work[found][i] = message[i];
                         }
@@ -173,7 +180,7 @@ int main(int argc , char **argv)
                     //sent_to[to_sort] = status.MPI_SOURCE;
                     sent_to[status.MPI_SOURCE] = to_sort;
                     
-                    for(int i = 0; i < ARRAY_SIZE;i++)
+                    for(i = 0; i < ARRAY_SIZE;i++)
                         {
                             message[i] = work[to_sort][i];
                         }
@@ -249,7 +256,7 @@ int main(int argc , char **argv)
             }
         }
     }
-    
+t2 = MPI_Wtime();
 
 
 MPI_Finalize();

@@ -32,9 +32,12 @@ int main(int argc , char **argv)
     double t1,t2;
 
 
+
      int *work[WORKSET];
      for(i = 0;i < WORKSET;i++)
         work[i] = (int*)malloc(ARRAY_SIZE * sizeof(int));
+        
+    //int (*work)[WORKSET] = malloc (ARRAY_SIZE * sizeof(*work));
 
 
     for (i=0 ; i<WORKSET; i++)              /* init array with worst case for sorting */
@@ -53,10 +56,6 @@ int main(int argc , char **argv)
     }
     #endif
 
-
-
-    printf("\n\n\n");
-    MPI_Init (&argc , & argv);
     t1 = MPI_Wtime();
 
 for(i = 0;i < WORKSET;i++)
@@ -76,7 +75,6 @@ for(i = 0;i < WORKSET;i++)
 
     t2 = MPI_Wtime();
     printf("\nTempo de execucao: %f\n\n",t2-t1);
-    MPI_Finalize();
 
     for(i = 0;i < WORKSET;i++)
         free(work[i]);
