@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "mpi.h"
+#include <time.h>
 
 //#define DEBUG 1            // comentar esta linha quando for medir tempo
 #define ARRAY_SIZE 200000      // trabalho final com o valores 10.000, 100.000, 1.000.000
@@ -15,7 +15,7 @@ int main(int argc , char **argv)
 {
    // int vetor[WORKSET];
     int i,j;
-    double t1,t2;
+    clock_t time;
 
 
 
@@ -41,7 +41,7 @@ int main(int argc , char **argv)
     }
     #endif
 
-    t1 = MPI_Wtime();
+    time = clock();
 
 for(i = 0;i < WORKSET;i++)
     qsort(work[i],ARRAY_SIZE,sizeof(int),compare);                     /* sort array */
@@ -58,8 +58,7 @@ for(i = 0;i < WORKSET;i++)
 
 
 
-    t2 = MPI_Wtime();
-    printf("\nTempo de execucao: %f\n\n",t2-t1);
+    printf("\nTempo de execucao: %f\n\n",(clock()-time)/(double)CLOCKS_PER_SEC);
 
     for(i = 0;i < WORKSET;i++)
         free(work[i]);
