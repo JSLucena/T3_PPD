@@ -27,7 +27,7 @@ void bs(int n, int * vetor)
 
 int main(int argc , char **argv)
 {
-   // int vetor[WORKSET];
+   
     int i,j;
     clock_t time;
 
@@ -36,8 +36,6 @@ int main(int argc , char **argv)
      int *work[WORKSET];
      for(i = 0;i < WORKSET;i++)
         work[i] = (int*)malloc(ARRAY_SIZE * sizeof(int));
-        
-    //int (*work)[WORKSET] = malloc (ARRAY_SIZE * sizeof(*work));
 
 
     for (i=0 ; i<WORKSET; i++)              /* init array with worst case for sorting */
@@ -56,7 +54,7 @@ int main(int argc , char **argv)
     }
     #endif
 
-    time = clock();
+    time = clock(); // inicio de medicao
 
 for(i = 0;i < WORKSET;i++)
     bs(ARRAY_SIZE, work[i]);                     /* sort array */
@@ -73,10 +71,10 @@ for(i = 0;i < WORKSET;i++)
 
 
 
-    printf("\nTempo de execucao: %f\n\n",(clock()-time)/(double)CLOCKS_PER_SEC);
+    printf("\nTempo de execucao: %f\n\n",(clock()-time)/(double)CLOCKS_PER_SEC); // fim de medicao
 
     for(i = 0;i < WORKSET;i++)
-        free(work[i]);
+        free(work[i]); //libera memoria
 
     return 0;
 }

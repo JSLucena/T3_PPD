@@ -13,7 +13,6 @@ int compare(const void * a, const void * b)
 
 int main(int argc , char **argv)
 {
-   // int vetor[WORKSET];
     int i,j;
     clock_t time;
 
@@ -41,7 +40,7 @@ int main(int argc , char **argv)
     }
     #endif
 
-    time = clock();
+    time = clock(); // inicio de medicao
 
 for(i = 0;i < WORKSET;i++)
     qsort(work[i],ARRAY_SIZE,sizeof(int),compare);                     /* sort array */
@@ -58,10 +57,10 @@ for(i = 0;i < WORKSET;i++)
 
 
 
-    printf("\nTempo de execucao: %f\n\n",(clock()-time)/(double)CLOCKS_PER_SEC);
+    printf("\nTempo de execucao: %f\n\n",(clock()-time)/(double)CLOCKS_PER_SEC); //fim de medicao
 
     for(i = 0;i < WORKSET;i++)
-        free(work[i]);
+        free(work[i]); //libera memoria
 
     return 0;
 }

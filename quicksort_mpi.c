@@ -29,40 +29,7 @@ int compare(const void * a, const void * b)
 {
     return(*(int*)a - *(int*)b);
 }
-int search_source(int n, int sent[], int source)
-{
-    int i = 0;
-    for(i=0;i<n;i++)
-    {
-        #ifdef DEBUG2
-            printf("[%d]",sent[i]);
-        #endif
-        if(sent[i] == source)
-            {
-                sent[i] = -1;
-                return i;
-            }
 
-        
-    }
-     #ifdef DEBUG2
-            printf("\n");
-    #endif
-    return -1;
-}
-
-int validate_sort(int n, int sent[])
-{
-    int i = 0;
-    for(i = 0;i < n; i++)
-    {
-        
-        if(sent[i] != -1)
-            return 0;
-    }
-   
-    return 1;
-}
 
 int main(int argc , char **argv)
 {
@@ -92,13 +59,9 @@ int main(int argc , char **argv)
 
     if(my_rank == 0)
     {
-        sent_to = malloc(proc_n * sizeof(int));
+        sent_to = malloc(proc_n * sizeof(int)); //array de controle de ordem do saco de trabalho
 
         int (*work)[WORKSET] = malloc (ARRAY_SIZE * sizeof(*work));
-        /*
-        for(i = 0;i < WORKSET;i++)
-            work[i] = (int*)malloc(ARRAY_SIZE * sizeof(int));
-            */
 
 
         for (i=0 ; i<WORKSET; i++)              /* init array with worst case for sorting */
@@ -115,46 +78,44 @@ int main(int argc , char **argv)
     }
     printf("\n");
     #endif
-        t1 = MPI_Wtime();
-        while(sorted == 0)
+        t1 = MPI_Wtime(); //inicio de medicao
+        while(sorted == 0) //enquanto nao estiver tudo pronto
         {
             #ifdef DEBUG_DEADLOCK
                     printf("A");
                 #endif
-            MPI_Recv(message, ARRAY_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status); 
+            MPI_Recv(message, ARRAY_SIZE, MPI_INT, MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status); //espera mensagens dos escravos
             
            
             
             
-            if(status.MPI_TAG == READY_TAG)
+            if(status.MPI_TAG == READY_TAG) //se os escravos estao prontos para iniciar a execucao
             {
                 int i;
-                //sent_to[to_sort] = status.MPI_SOURCE;
-                sent_to[status.MPI_SOURCE] = to_sort;
+                sent_to[status.MPI_SOURCE] = to_sort; //guarda o indice do vetor a ser mandado na posicao do escravo a ser mandado
                 
                 for(i = 0; i < ARRAY_SIZE;i++)
                 {
-                    message[i] = work[to_sort][i];
+                    message[i] = work[to_sort][i]; // copia o vetor a ser ordenado para a mensagem
                 }
                 
-                //message = work[to_sort];
-                to_sort++;
+                to_sort++; //incrementa o contador do saco
                 
-                MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
+                MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD); //envia pro escravo que pediu
 
                 #ifdef DEBUG_VERBOSE
                 printf("mandei vetor %d para proc %d\n",to_sort-1, status.MPI_SOURCE);
                 #endif
 
             }
-            else if(status.MPI_TAG == STOPPING_TAG)
+            else if(status.MPI_TAG == STOPPING_TAG) //se os escravos responderam
             {
                 #ifdef DEBUG_VERBOSE
                 printf("proc %d morto\n", status.MPI_SOURCE);
                 #endif
-                done_processess++;
+                done_processess++; // significa que eles terminaram de executar
             } 
-            else if(status.MPI_TAG == DONE_TAG)
+            else if(status.MPI_TAG == DONE_TAG) // quando o escravo termina o trabalho e esta pronto para outro
             {            
                     #ifdef DEBUG_MESSAGE  
                         for(j=0;j<ARRAY_SIZE;j++)
@@ -162,7 +123,7 @@ int main(int argc , char **argv)
                         printf("\n");
                     #endif
                    
-                    int found = sent_to[status.MPI_SOURCE];
+                    int found = sent_to[status.MPI_SOURCE]; // pesquisa qual foi o vetor recebido agora
 
                     #ifdef DEBUG_VERBOSE
                     printf("recebi vetor %d de proc %d\n",found, status.MPI_SOURCE);
@@ -171,51 +132,50 @@ int main(int argc , char **argv)
                    
                     for(i = 0; i < ARRAY_SIZE;i++)
                         {
-                            work[found][i] = message[i];
+                            work[found][i] = message[i];  //copia o vetor ordenado na mensagem para o saco de trabalho
                         }
                     
-                   // work[found][0] = *message;
-                if(to_sort < WORKSET)
+                   
+                if(to_sort < WORKSET) // se ainda nao terminamos nosso trabalho
                 {
-                    //sent_to[to_sort] = status.MPI_SOURCE;
-                    sent_to[status.MPI_SOURCE] = to_sort;
+                    sent_to[status.MPI_SOURCE] = to_sort; //guarda o indice do vetor a ser mandado na posicao do escravo a ser mandado
                     
                     for(i = 0; i < ARRAY_SIZE;i++)
                         {
-                            message[i] = work[to_sort][i];
+                            message[i] = work[to_sort][i]; // copia o vetor a ser ordenado para a mensagem
                         }
                     
-                    //message = work[to_sort];
-                    to_sort++;
+                    
+                    to_sort++; //incrementa o contador do saco
                     #ifdef DEBUG_VERBOSE
                     printf("mandei vetor %d para proc %d\n",to_sort-1, status.MPI_SOURCE);
                     #endif                                     
-                    MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD);
+                    MPI_Send(message, ARRAY_SIZE, MPI_INT, status.MPI_SOURCE, WORK_TAG, MPI_COMM_WORLD); //envia pro escravo que pediu
                 }
-                if(to_sort > WORKSET-1)
+                if(to_sort > WORKSET-1) //se ja enviamos tudo, mas os escravos estao pedindo mais
                 {
                     #ifdef DEBUG_VERBOSE
                     printf("matarei proc %d\n", status.MPI_SOURCE);
                     #endif
-                    MPI_Send(message, 1, MPI_INT, status.MPI_SOURCE, STOP_TAG, MPI_COMM_WORLD);
+                    MPI_Send(message, 1, MPI_INT, status.MPI_SOURCE, STOP_TAG, MPI_COMM_WORLD); //manda o escravo morrer pois nao tem mais trabalho
              
                 }                              
             }
             
-             if(done_processess >= proc_n-1)
+             if(done_processess >= proc_n-1) //se todos os escravos estao mortos
                 {
                     #ifdef DEBUG_DEADLOCK
                     printf("FODEU");
                     #endif
-                    break;
-                }
+                    break;//terminamos nosso trabalho
+                } 
             
         
         }
         
         
         
-        t2 = MPI_Wtime();
+        t2 = MPI_Wtime(); //terminamos a medicao
 
          #ifdef DEBUG
          for (i=0 ; i<WORKSET; i++)    
@@ -230,33 +190,32 @@ int main(int argc , char **argv)
     }
     else
     {
-        MPI_Send(message, 1, MPI_INT, 0, READY_TAG, MPI_COMM_WORLD);
+        MPI_Send(message, 1, MPI_INT, 0, READY_TAG, MPI_COMM_WORLD); //inicia a execucao o escravo estra pronto pra trabalhar
         while(1)
         {
             MPI_Recv(message, ARRAY_SIZE, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status);  
-            if(status.MPI_TAG == WORK_TAG)
+            if(status.MPI_TAG == WORK_TAG) // se for uma mensagem de trabalho
             {
                 #ifdef DEBUG2   
                     for(j=0;j<ARRAY_SIZE;j++)
                         printf("[%03d] ", message[j]);
                 #endif
-                qsort(message,ARRAY_SIZE,sizeof(int),compare);  
+                qsort(message,ARRAY_SIZE,sizeof(int),compare);  // ordena o vetor
 
                 #ifdef DEBUG2 
                     for(j=0;j<ARRAY_SIZE;j++)
                         printf("[%03d] ", message[j]);
                 #endif
-                MPI_Send(message, ARRAY_SIZE, MPI_INT, 0, DONE_TAG, MPI_COMM_WORLD);
+                MPI_Send(message, ARRAY_SIZE, MPI_INT, 0, DONE_TAG, MPI_COMM_WORLD); //manda de volta
                  
             }
-            if(status.MPI_TAG == STOP_TAG)
+            if(status.MPI_TAG == STOP_TAG) // se o mestre pede para eu parar
             {
-                MPI_Send(message, 1, MPI_INT, 0, STOPPING_TAG, MPI_COMM_WORLD);
-                break;
+                MPI_Send(message, 1, MPI_INT, 0, STOPPING_TAG, MPI_COMM_WORLD); //respondo que entendi
+                break; // e paro
             }
         }
     }
-t2 = MPI_Wtime();
 
 
 MPI_Finalize();
